@@ -1,0 +1,5 @@
+{
+  "name": "Plyform UT Transformation Tracker",
+  "description": "A project management tool to track the transformation of the Plyform Technical Office (UT), integrating analysis, strategy, and a 10-day execution plan with Firebase.",
+  "requestFramePermissions": []
+}
