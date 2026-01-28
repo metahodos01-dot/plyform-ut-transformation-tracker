@@ -62,6 +62,13 @@ export interface EmergingNeed {
     explanation: string;
     timestamp: string;
   };
+
+  // Financial KPIs
+  kpiValues?: {
+    revenue?: number; // Fatturato
+    margin?: number;  // Margine Operativo
+    cashflow?: number; // Cashflow
+  };
 }
 
 export interface UserStory {
@@ -93,6 +100,9 @@ export interface UserStory {
     date: string; // ISO Date
     assignees: string[]; // Team members
   };
+
+  // Sprint Planning
+  sprintIndex?: number; // 0-9 (0-1: Closed, 2-9: Planned)
 }
 
 export interface KPIMetric {

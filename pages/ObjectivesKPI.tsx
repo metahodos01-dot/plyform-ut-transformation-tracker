@@ -817,6 +817,25 @@ export const ObjectivesKPI: React.FC = () => {
                                 <div className="flex items-center gap-2 mb-1">
                                     <span className="bg-indigo-100 text-indigo-700 text-[10px] font-bold px-1.5 rounded">ESIGENZA</span>
                                     <span className="text-xs text-slate-500">{need.originator}</span>
+
+                                    {/* KPI Badges */}
+                                    <div className="flex items-center gap-2 ml-2 border-l border-slate-200 pl-2">
+                                        {need.kpiValues?.revenue !== undefined && (
+                                            <span className="text-[9px] font-bold bg-emerald-50 text-emerald-700 px-1.5 py-0.5 rounded border border-emerald-100">
+                                                € {need.kpiValues.revenue.toLocaleString()} Rev
+                                            </span>
+                                        )}
+                                        {need.kpiValues?.margin !== undefined && (
+                                            <span className="text-[9px] font-bold bg-blue-50 text-blue-700 px-1.5 py-0.5 rounded border border-blue-100">
+                                                {need.kpiValues.margin}% Mar
+                                            </span>
+                                        )}
+                                        {need.kpiValues?.cashflow !== undefined && (
+                                            <span className="text-[9px] font-bold bg-purple-50 text-purple-700 px-1.5 py-0.5 rounded border border-purple-100">
+                                                € {need.kpiValues.cashflow.toLocaleString()} CF
+                                            </span>
+                                        )}
+                                    </div>
                                 </div>
                                 <div className="font-bold text-slate-800">{need.description}</div>
                             </div>

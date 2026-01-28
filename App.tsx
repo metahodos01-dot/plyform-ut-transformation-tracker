@@ -37,12 +37,12 @@ const App: React.FC = () => {
     { id: Page.DASHBOARD, label: 'Panoramica', icon: Home },
     { id: Page.NEEDS, label: 'Esigenze (As-Is)', icon: Target },
     { id: Page.OBJECTIVES, label: 'User Stories (Agile)', icon: Layers },
-    { id: Page.EXECUTION, label: 'Esecuzione (10gg)', icon: CalendarCheck },
+    { id: Page.EXECUTION, label: 'Sprint', icon: CalendarCheck },
   ];
 
   return (
-    <Layout 
-      activePage={currentPage} 
+    <Layout
+      activePage={currentPage}
       onNavigate={(p) => setCurrentPage(p as Page)}
       navItems={navItems}
     >
