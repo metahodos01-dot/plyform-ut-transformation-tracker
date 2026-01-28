@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Technical & Security Whitepaper - AI Contract Intelligence</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+
+        :root {
+            --primary-color: #0f172a;
+            --secondary-color: #334155;
+            --accent-color: #2563eb;
+            --bg-color: #ffffff;
+            --text-color: #1e293b;
+            --border-color: #e2e8f0;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            line-height: 1.6;
+            color: var(--text-color);
+            background-color: var(--bg-color);
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            max-width: 210mm; /* A4 width */
+            margin: 40px auto;
+            padding: 40px;
+            background: white;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Print Button Styles */
+        .no-print {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: var(--accent-color);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: 600;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+            z-index: 1000;
+        }
+        .no-print:hover {
+            background-color: #1d4ed8;
+        }
+
+        h1, h2, h3 {
+            color: var(--primary-color);
+            margin-top: 1.5em;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            border-bottom: 2px solid var(--accent-color);
+            padding-bottom: 10px;
+            margin-top: 50px; /* Space for logo in print */
+        }
+
+        h2 {
+            font-size: 1.5rem;
+            color: var(--secondary-color);
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 5px;
+        }
+
+        h3 {
+            font-size: 1.1rem;
+            font-weight: 700;
+        }
+
+        p {
+            margin-bottom: 1em;
+            text-align: justify;
+        }
+
+        ul {
+            margin-bottom: 1em;
+        }
+
+        li {
+            margin-bottom: 0.5em;
+        }
+
+        /* Table Styles */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            font-size: 0.95rem;
+        }
+
+        th, td {
+            border: 1px solid var(--border-color);
+            padding: 12px;
+            text-align: left;
+        }
+
+        th {
+            background-color: #f8fafc;
+            font-weight: 600;
+            color: var(--secondary-color);
+        }
+
+        /* Code Block Styles */
+        pre {
+            background-color: #f1f5f9;
+            padding: 15px;
+            border-radius: 6px;
+            overflow-x: auto;
+            border: 1px solid var(--border-color);
+        }
+
+        code {
+            font-family: 'Monaco', 'Consolas', monospace;
+            font-size: 0.9em;
+            color: #d63384;
+        }
+
+        pre code {
+            color: var(--text-color);
+        }
+
+        blockquote {
+            background-color: #f8fafc;
+            border-left: 4px solid var(--accent-color);
+            margin: 20px 0;
+            padding: 10px 20px;
+            font-style: italic;
+            color: var(--secondary-color);
+        }
+
+        .meta-info {
+            color: #64748b;
+            font-size: 0.9rem;
+            margin-top: -20px;
+            margin-bottom: 40px;
+        }
+
+        /* Print Media Query */
+        @media print {
+            body {
+                background: white;
+                font-size: 11pt;
+            }
+            .container {
+                width: 100%;
+                max-width: none;
+                margin: 0;
+                padding: 0;
+                box-shadow: none;
+            }
+            .no-print {
+                display: none;
+            }
+            h1 {
+                margin-top: 0;
+                font-size: 24pt;
+            }
+            a {
+                text-decoration: none;
+                color: black;
+            }
+            /* Ensure page breaks don't cut elements awkwardly */
+            h1, h2, h3 {
+                page-break-after: avoid;
+            }
+            table, pre, blockquote {
+                page-break-inside: avoid;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <button onclick="window.print()" class="no-print">🖨️ Stampa / Salva come PDF</button>
+
+    <div class="container">
+        <h1>AI Contract Intelligence Platform</h1>
+        <div class="meta-info">
+            <strong>Technical Architecture & Security Whitepaper</strong><br>
+            Versione 1.0 - Gennaio 2026
+        </div>
+
+        <hr>
+
+        <h2>Executive Summary</h2>
+        <p>
+            La <strong>AI Contract Intelligence Platform</strong> è una soluzione Enterprise SaaS progettata per automatizzare l'analisi legale di contratti commerciali all'interno di gruppi aziendali complessi. Il sistema sfrutta l'Intelligenza Artificiale Generativa (LLM) di ultima generazione per identificare rischi legali, anomalie e clausole critiche con un livello di precisione "human-in-the-loop".
+        </p>
+        <p>
+            L'architettura è costruita secondo i principi di <strong>Security-by-Design</strong> e <strong>Privacy-by-Default</strong>, garantendo la totale sovranità dei dati per ogni entità del gruppo (Multi-Tenancy) e la piena conformità al GDPR grazie all'utilizzo di modelli AI "Zero Retention".
+        </p>
+
+        <h2>1. Architettura Tecnica</h2>
+        <p>
+            Il sistema è basato su un'infrastruttura Cloud-Native Serverless, che garantisce scalabilità automatica, alta disponibilità e costi ottimizzati in base all'utilizzo.
+        </p>
+
+        <h3>1.1 Stack Tecnologico</h3>
+        <table>
+            <thead>
+                <tr>
+                    <th>Componente</th>
+                    <th>Tecnologia</th>
+                    <th>Ruolo</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Frontend</strong></td>
+                    <td>Next.js 15+ (React)</td>
+                    <td>Interfaccia utente reattiva e ottimizzata per Edge Network.</td>
+                </tr>
+                <tr>
+                    <td><strong>UI Framework</strong></td>
+                    <td>Tailwind CSS + Shadcn/UI</td>
+                    <td>Design system moderno, accessibile e responsive.</td>
+                </tr>
+                <tr>
+                    <td><strong>Backend</strong></td>
+                    <td>Google Firebase (Serverless)</td>
+                    <td>Gestione API, Database e Autenticazione senza server management.</td>
+                </tr>
+                <tr>
+                    <td><strong>Database</strong></td>
+                    <td>Cloud Firestore (NoSQL)</td>
+                    <td>Database documentale real-time per alta scalabilità.</td>
+                </tr>
+                <tr>
+                    <td><strong>OCR Engine</strong></td>
+                    <td>Google Cloud Document AI</td>
+                    <td>Estrazione testo ad alta fedeltà da PDF scansionati.</td>
+                </tr>
+                <tr>
+                    <td><strong>AI Model</strong></td>
+                    <td>Claude 3.5 Sonnet (via AWS Bedrock)</td>
+                    <td>LLM avanzato con context window di 200k token per analisi profonda.</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h3>1.2 Flusso dei Dati (Data Flow)</h3>
+        <ol>
+            <li><strong>Ingestion Sicura</strong>: L'utente carica il PDF crittografato nel bucket di storage isolato per Tenant.</li>
+            <li><strong>Enterprise OCR</strong>: Google Document AI processa il documento, digitalizzando anche testo manoscritto o scansionato con bassa risoluzione.</li>
+            <li><strong>Context Construction</strong>: Il sistema prepara il contesto per l'IA, mappando ogni frase alle coordinate fisiche (Pagina/Riga) originali.</li>
+            <li><strong>Inference Privata</strong>: La richiesta viene inviata ad AWS Bedrock in un tunnel cifrato. Nessun dato viene salvato o usato per il training del modello pubblico.</li>
+            <li><strong>Risk Analysis</strong>: L'IA restituisce un JSON strutturato con i rischi identificati, che viene salvato su Firestore.</li>
+            <li><strong>Visualizzazione</strong>: L'Editor Split-Screen mostra il documento originale ed evidenzia i rischi, permettendo al revisore umano di validare o correggere.</li>
+        </ol>
+
+        <h2>2. Strategia di Sicurezza & Compliance</h2>
+        <p>
+            La sicurezza è il pilastro fondante della piattaforma, progettata per trattare dati sensibili e confidenziali.
+        </p>
+
+        <h3>2.1 Multi-Tenant Isolation</h3>
+        <p>
+            La piattaforma garantisce che i dati di ogni azienda del gruppo (es. Company A, Company B) siano visibili <em>solo</em> agli utenti autorizzati di quell'azienda, pur permettendo una supervisione centralizzata al Group Director.
+        </p>
+        <p>
+            <strong>Meccanismo: Row-Level Security (RLS)</strong><br>
+            Utilizziamo le Security Rules di Firestore per applicare controlli di accesso a livello di database kernel. Esempio logico di regola:
+        </p>
+
+        <pre><code>match /contracts/{contractId} {
+  allow read: if isGroupDirector() || (isAuthenticated() && resource.data.companyId == user.companyId);
+}</code></pre>
+
+        <ul>
+            <li><strong>Group Director</strong>: Visibilità totale (Read/Write) su tutte le entità.</li>
+            <li><strong>Company Admin</strong>: Accesso strettamente limitato ai documenti della propria Legal Entity.</li>
+        </ul>
+
+        <h3>2.2 AI Safety & GDPR Compliance</h3>
+        <p>L'utilizzo di Generative AI in ambito legale richiede garanzie assolute sulla privacy dei dati.</p>
+        <ul>
+            <li><strong>Provider</strong>: AWS Bedrock (Regione EU: Francoforte / US-East-1).</li>
+            <li><strong>Zero Data Retention</strong>: AWS garantisce contrattualmente che <strong>nessun input o output</strong> processato viene memorizzato nei log o utilizzato per addestrare i modelli base di Anthropic o Amazon. I dati sono volatili e esistono solo per la durata dell'inferenza.</li>
+            <li><strong>Private Isolation</strong>: L'inferenza avviene in un ambiente VPC (Virtual Private Cloud) isolato, non su API pubbliche condivise.</li>
+        </ul>
+
+        <h3>2.3 Crittografia</h3>
+        <ul>
+            <li><strong>At Rest</strong>: Tutti i dati (PDF, Analisi, Feedback) sono crittografati a riposo (AES-256) negli storage di Google Cloud.</li>
+            <li><strong>In Transit</strong>: Tutte le comunicazioni API avvengono esclusivamente su canali cifrati TLS 1.3.</li>
+        </ul>
+
+        <h2>3. Scalabilità e Futuro</h2>
+        <p>
+            L'architettura Serverless permette di scalare da 10 a 10.000 contratti analizzati al giorno senza modifiche infrastrutturali. Il sistema è predisposto per l'integrazione futura con:
+        </p>
+        <ul>
+            <li><strong>Firma Digitale</strong> (es. DocuSign/Adobe Sign).</li>
+            <li><strong>ERP Aziendali</strong> (es. SAP/Salesforce) per l'importazione automatica.</li>
+        </ul>
+    </div>
+
+</body>
+</html>
