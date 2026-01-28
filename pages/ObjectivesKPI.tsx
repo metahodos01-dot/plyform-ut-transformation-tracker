@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { Target, ArrowRight, Save, Plus, Trash2, CheckCircle2, XCircle, LayoutList, Loader2, Link as LinkIcon, AlertTriangle, Clock, Edit2, Sparkles, Bot, RefreshCw, Users, Wand2, Calculator, ChevronDown, ChevronUp, Pencil, BookOpen, Layers, CheckSquare } from 'lucide-react';
+import { Target, ArrowRight, Save, Plus, Trash2, CheckCircle2, XCircle, LayoutList, Loader2, Link as LinkIcon, AlertTriangle, Clock, Edit2, Sparkles, Bot, RefreshCw, Users, Wand2, Calculator, ChevronDown, ChevronUp, Pencil, BookOpen, Layers, CheckSquare, PieChart, Activity } from 'lucide-react';
 import { db, NEEDS_COLLECTION, USER_STORIES_COLLECTION, TASKS_COLLECTION, ensureAuth, getProjectSettings, updateLastSaved, formatDateTime } from '../services/firebase';
 import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, where, writeBatch } from 'firebase/firestore';
 import { EmergingNeed, UserStory, StoryStatus, TeamMember, Complexity, Task } from '../types';
@@ -185,6 +185,20 @@ export const ObjectivesKPI: React.FC = () => {
             await updateLastSaved();
         } catch (e) {
             console.error("Error deleting", e);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleCloseStory = async (story: UserStory) => {
+        if (!window.confirm("Vuoi chiudere questa User Story?")) return;
+        setLoading(true);
+        try {
+            await updateDoc(doc(db, USER_STORIES_COLLECTION, story.id), { status: 'CLOSED' });
+            setStories(stories.map(s => s.id === story.id ? { ...s, status: 'CLOSED' } : s));
+            await updateLastSaved();
+        } catch (e) {
+            console.error("Error closing story", e);
         } finally {
             setLoading(false);
         }
@@ -376,6 +390,83 @@ export const ObjectivesKPI: React.FC = () => {
                     </div>
                 </div>
             </div>
+
+            {/* NEW KPI DASHBOARD */}
+            {!isManualAdding && (
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-in fade-in slide-in-from-top-4">
+                    {/* INDICATOR 1: NEEDS SATISFIED */}
+                    <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                        <div className="flex items-center gap-3 mb-4">
+                            <div className="p-3 bg-emerald-100 text-emerald-600 rounded-xl">
+                                <CheckCircle2 size={24} />
+                            </div>
+                            <div>
+                                <h3 className="text-slate-500 text-xs font-bold uppercase tracking-wider">Esigenze Soddisfatte</h3>
+                                <p className="text-2xl font-bold text-slate-800">
+                                    {needs.filter(n => {
+                                        const nStories = grouped[n.id] || [];
+                                        return nStories.length > 0 && nStories.every(s => s.status === 'CLOSED');
+                                    }).length}
+                                    <span className="text-slate-400 text-sm font-normal ml-2">su {needs.length}</span>
+                                </p>
+                            </div>
+                        </div>
+                        <div className="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
+                            <div
+                                className="bg-emerald-500 h-full transition-all duration-1000"
+                                style={{
+                                    width: `${needs.length > 0 ? (needs.filter(n => {
+                                        const nStories = grouped[n.id] || [];
+                                        return nStories.length > 0 && nStories.every(s => s.status === 'CLOSED');
+                                    }).length / needs.length) * 100 : 0}%`
+                                }}
+                            ></div>
+                        </div>
+                    </div>
+
+                    {/* INDICATOR 2: USER STORY PROGRESS PER NEED */}
+                    <div className="lg:col-span-2 bg-white p-6 rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                        <div className="flex items-center gap-3 mb-6">
+                            <div className="p-3 bg-blue-100 text-blue-600 rounded-xl">
+                                <Activity size={24} />
+                            </div>
+                            <div>
+                                <h3 className="text-slate-500 text-xs font-bold uppercase tracking-wider">Avanzamento User Story per Esigenza</h3>
+                                <p className="text-sm text-slate-400">Stato di apertura e chiusura delle storie collegate</p>
+                            </div>
+                        </div>
+
+                        <div className="max-h-[200px] overflow-y-auto pr-2 space-y-3 custom-scrollbar">
+                            {needs.map(need => {
+                                const nStories = grouped[need.id] || [];
+                                const closedCount = nStories.filter(s => s.status === 'CLOSED').length;
+                                const totalCount = nStories.length;
+
+                                if (totalCount === 0) return null;
+
+                                return (
+                                    <div key={need.id} className="flex items-center justify-between text-sm p-3 bg-slate-50 rounded-lg border border-slate-100 hover:border-blue-200 transition-colors">
+                                        <div className="flex-1 truncate pr-4">
+                                            <div className="font-bold text-slate-700 truncate" title={need.description}>{need.description}</div>
+                                            <div className="text-[10px] text-slate-400">{need.originator}</div>
+                                        </div>
+                                        <div className="flex items-center gap-4 shrink-0">
+                                            <div className="flex flex-col items-end">
+                                                <span className="font-bold text-slate-800">{closedCount}/{totalCount}</span>
+                                                <span className="text-[10px] text-slate-500 uppercase">Chiuse</span>
+                                            </div>
+                                            <div className="w-24 h-2 bg-slate-200 rounded-full overflow-hidden">
+                                                <div className="bg-blue-600 h-full" style={{ width: `${(closedCount / totalCount) * 100}%` }}></div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                            {Object.keys(grouped).length === 0 && <p className="text-center text-slate-400 italic text-xs py-4">Nessuna storia collegata.</p>}
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* MANUAL ENTRY / EDIT FORM CARD */}
             {isManualAdding && (
@@ -637,9 +728,18 @@ export const ObjectivesKPI: React.FC = () => {
                                         {grouped[need.id].map(story => (
                                             <div key={story.id} className={`p-4 rounded-xl border relative group transition-all ${story.status === 'INTEGRATED' ? 'bg-emerald-50/50 border-emerald-100 opacity-80' : 'bg-white border-slate-100 hover:border-indigo-200 hover:shadow-md'}`}>
                                                 {/* Action Buttons */}
-                                                <div className="absolute top-3 right-3 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-10">
-                                                    <button onClick={() => handleEditClick(story)} className="p-1.5 text-slate-400 hover:text-blue-600 rounded bg-white border border-slate-200 shadow-sm"><Pencil size={12} /></button>
-                                                    <button onClick={() => handleDelete(story.id)} className="p-1.5 text-slate-400 hover:text-red-600 rounded bg-white border border-slate-200 shadow-sm"><Trash2 size={12} /></button>
+                                                <div className="absolute top-3 right-3 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-10 bg-white/90 p-1 rounded-lg backdrop-blur-sm shadow-sm border border-slate-100">
+                                                    {story.status !== 'CLOSED' && (
+                                                        <button
+                                                            onClick={() => handleCloseStory(story)}
+                                                            className="px-2 py-1 text-[10px] font-bold text-white bg-emerald-500 hover:bg-emerald-600 rounded flex items-center gap-1 shadow-sm transition-all"
+                                                            title="Chiudi User Story"
+                                                        >
+                                                            <CheckCircle2 size={12} /> Chiudi
+                                                        </button>
+                                                    )}
+                                                    <button onClick={() => handleEditClick(story)} className="p-1.5 text-slate-400 hover:text-blue-600 rounded hover:bg-slate-50"><Pencil size={14} /></button>
+                                                    <button onClick={() => handleDelete(story.id)} className="p-1.5 text-slate-400 hover:text-red-600 rounded hover:bg-slate-50"><Trash2 size={14} /></button>
                                                 </div>
 
                                                 <div className="flex items-center gap-2 mb-2">
@@ -647,9 +747,11 @@ export const ObjectivesKPI: React.FC = () => {
                                                         {story.complexity}
                                                     </span>
                                                     <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded uppercase ${story.status === 'CONFIRMED' ? 'bg-indigo-50 text-indigo-600' :
-                                                        story.status === 'INTEGRATED' ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-50 text-slate-400'
+                                                        story.status === 'INTEGRATED' ? 'bg-emerald-50 text-emerald-600' :
+                                                            story.status === 'CLOSED' ? 'bg-slate-800 text-white' :
+                                                                'bg-slate-50 text-slate-400'
                                                         }`}>
-                                                        {story.status}
+                                                        {story.status === 'CLOSED' ? 'CHIUSA' : story.status}
                                                     </span>
                                                 </div>
 
@@ -725,9 +827,22 @@ export const ObjectivesKPI: React.FC = () => {
                                     <div className="absolute -left-[9px] top-4 w-4 h-0.5 bg-slate-200"></div>
 
                                     <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 inline-block min-w-[300px] hover:border-indigo-300 transition-colors">
-                                        <div className="flex items-center gap-2 mb-1">
-                                            <span className="bg-slate-200 text-slate-600 text-[10px] font-bold px-1.5 rounded">USER STORY</span>
-                                            <span className="text-[10px] text-slate-400">{story.complexity}</span>
+                                        <div className="flex items-center justify-between mb-1">
+                                            <div className="flex items-center gap-2">
+                                                <span className={`text-[10px] font-bold px-1.5 rounded ${story.status === 'CLOSED' ? 'bg-slate-800 text-white' : 'bg-slate-200 text-slate-600'}`}>
+                                                    {story.status === 'CLOSED' ? 'CHIUSA' : 'USER STORY'}
+                                                </span>
+                                                <span className="text-[10px] text-slate-400">{story.complexity}</span>
+                                            </div>
+
+                                            {story.status !== 'CLOSED' && (
+                                                <button
+                                                    onClick={() => handleCloseStory(story)}
+                                                    className="opacity-0 group-hover:opacity-100 px-2 py-0.5 bg-emerald-100 text-emerald-700 text-[10px] font-bold rounded hover:bg-emerald-200 transition-all flex items-center gap-1"
+                                                >
+                                                    <CheckCircle2 size={10} /> Chiudi
+                                                </button>
+                                            )}
                                         </div>
                                         <div className="font-medium text-slate-700 text-sm">{story.action}</div>
 
@@ -801,4 +916,3 @@ export const ObjectivesKPI: React.FC = () => {
         </div>
     );
 };
-

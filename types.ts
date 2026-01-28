@@ -7,7 +7,7 @@ export enum Status {
 }
 
 export type NeedStatus = 'PENDING' | 'CONFIRMED' | 'REJECTED' | 'INTEGRATED';
-export type StoryStatus = 'PENDING' | 'CONFIRMED' | 'REJECTED' | 'INTEGRATED';
+export type StoryStatus = 'PENDING' | 'CONFIRMED' | 'REJECTED' | 'INTEGRATED' | 'CLOSED';
 export type PriorityLevel = 'URGENT' | 'HIGH' | 'MEDIUM' | 'LOW';
 export type Complexity = 'XS' | 'S' | 'M' | 'L' | 'XL';
 
