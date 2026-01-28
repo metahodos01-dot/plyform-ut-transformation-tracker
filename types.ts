@@ -36,13 +36,13 @@ export interface Task {
   completed: boolean;
   assignedTo?: string; // e.g., "Leonardo", "Ramponi"
   duration: number; // Duration in hours (default 1)
-  
+
   // Execution details
   completedAt?: string; // ISO Date YYYY-MM-DD
   attendees?: string; // Comma separated names
   notes?: string; // Description of activity performed
   definitionOfDone?: string; // Criteria for completion
-  
+
   // Link back to need/story
   generatedFromNeedId?: string;
   generatedFromStoryId?: string;
@@ -68,19 +68,31 @@ export interface UserStory {
   id: string;
   needId: string; // Linked EmergingNeed ID
   needDescription?: string; // Denormalized for display
-  
+
   // Agile Format
   role: string;   // "As a..."
   action: string; // "I want to..."
   benefit: string; // "So that..."
-  
+
   complexity: Complexity;
   definitionOfReady: string; // DoR
   definitionOfDone: string; // DoD
-  
+
   assignedTo: string[]; // List of names
   status: StoryStatus;
   duration: number; // Estimated hours for execution
+
+  // Enhanced Traceability
+  solution?: {
+    description: string;
+    date: string; // ISO Date
+    assignees: string[]; // Team members
+  };
+  verification?: {
+    description: string;
+    date: string; // ISO Date
+    assignees: string[]; // Team members
+  };
 }
 
 export interface KPIMetric {

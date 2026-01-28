@@ -37,6 +37,8 @@ export const ObjectivesKPI: React.FC = () => {
         duration: number;
         assignedTo: string[];
         needId: string;
+        solution: { description: string; date: string; assignees: string[] };
+        verification: { description: string; date: string; assignees: string[] };
     }>({
         role: '',
         action: '',
@@ -46,7 +48,9 @@ export const ObjectivesKPI: React.FC = () => {
         definitionOfDone: '',
         duration: 2,
         assignedTo: [],
-        needId: ''
+        needId: '',
+        solution: { description: '', date: '', assignees: [] },
+        verification: { description: '', date: '', assignees: [] }
     });
 
     useEffect(() => {
@@ -111,7 +115,9 @@ export const ObjectivesKPI: React.FC = () => {
         setManualForm({
             role: '', action: '', benefit: '',
             complexity: 'M', definitionOfReady: '', definitionOfDone: '',
-            duration: 2, assignedTo: [], needId: ''
+            duration: 2, assignedTo: [], needId: '',
+            solution: { description: '', date: '', assignees: [] },
+            verification: { description: '', date: '', assignees: [] }
         });
         setEditingStoryId(null);
         setIsManualAdding(false);
@@ -127,7 +133,9 @@ export const ObjectivesKPI: React.FC = () => {
             definitionOfDone: story.definitionOfDone,
             duration: story.duration,
             assignedTo: story.assignedTo,
-            needId: story.needId
+            needId: story.needId,
+            solution: story.solution || { description: '', date: '', assignees: [] },
+            verification: story.verification || { description: '', date: '', assignees: [] }
         });
         setEditingStoryId(story.id);
         setIsManualAdding(true);
@@ -435,6 +443,98 @@ export const ObjectivesKPI: React.FC = () => {
                                 <input type="number" step="0.5" value={manualForm.duration} onChange={e => setManualForm({ ...manualForm, duration: parseFloat(e.target.value) })} className="w-24 border-slate-300 rounded text-sm" />
                             </div>
                         </div>
+
+                        {/* SOLUTION & VERIFICATION SECTION */}
+                        <div className="border-t border-slate-100 pt-4 mt-2">
+                            <h4 className="text-sm font-bold text-slate-700 mb-3 flex items-center gap-2"><Wand2 size={16} /> Soluzione & Verifica</h4>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                {/* SOLUTION FIELD */}
+                                <div className="bg-blue-50/50 p-4 rounded-lg border border-blue-100">
+                                    <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Soluzione Tecnica</label>
+                                    <textarea
+                                        rows={3}
+                                        placeholder="Descrivi la soluzione tecnica..."
+                                        value={manualForm.solution.description}
+                                        onChange={e => setManualForm({ ...manualForm, solution: { ...manualForm.solution, description: e.target.value } })}
+                                        className="w-full border-slate-300 rounded text-sm mb-3"
+                                    />
+                                    <div className="flex gap-2 mb-2">
+                                        <div className="flex-1">
+                                            <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Data Soluzione</label>
+                                            <input
+                                                type="date"
+                                                value={manualForm.solution.date}
+                                                onChange={e => setManualForm({ ...manualForm, solution: { ...manualForm.solution, date: e.target.value } })}
+                                                className="w-full border-slate-300 rounded text-xs"
+                                            />
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Esecutori Soluzione</label>
+                                        <div className="flex flex-wrap gap-1">
+                                            {teamMembers.map(member => (
+                                                <button
+                                                    key={member.id}
+                                                    onClick={() => {
+                                                        const current = manualForm.solution.assignees;
+                                                        const newAssignees = current.includes(member.name)
+                                                            ? current.filter(n => n !== member.name)
+                                                            : [...current, member.name];
+                                                        setManualForm({ ...manualForm, solution: { ...manualForm.solution, assignees: newAssignees } });
+                                                    }}
+                                                    className={`px-2 py-0.5 rounded text-[10px] font-bold border ${manualForm.solution.assignees.includes(member.name) ? 'bg-blue-600 text-white border-blue-600' : 'bg-white text-slate-500 border-slate-200'}`}
+                                                >
+                                                    {member.name}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* VERIFICATION FIELD */}
+                                <div className="bg-emerald-50/50 p-4 rounded-lg border border-emerald-100">
+                                    <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Verifica & Validazione</label>
+                                    <textarea
+                                        rows={3}
+                                        placeholder="Note di verifica..."
+                                        value={manualForm.verification.description}
+                                        onChange={e => setManualForm({ ...manualForm, verification: { ...manualForm.verification, description: e.target.value } })}
+                                        className="w-full border-slate-300 rounded text-sm mb-3"
+                                    />
+                                    <div className="flex gap-2 mb-2">
+                                        <div className="flex-1">
+                                            <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Data Verifica</label>
+                                            <input
+                                                type="date"
+                                                value={manualForm.verification.date}
+                                                onChange={e => setManualForm({ ...manualForm, verification: { ...manualForm.verification, date: e.target.value } })}
+                                                className="w-full border-slate-300 rounded text-xs"
+                                            />
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Esecutori Verifica</label>
+                                        <div className="flex flex-wrap gap-1">
+                                            {teamMembers.map(member => (
+                                                <button
+                                                    key={member.id}
+                                                    onClick={() => {
+                                                        const current = manualForm.verification.assignees;
+                                                        const newAssignees = current.includes(member.name)
+                                                            ? current.filter(n => n !== member.name)
+                                                            : [...current, member.name];
+                                                        setManualForm({ ...manualForm, verification: { ...manualForm.verification, assignees: newAssignees } });
+                                                    }}
+                                                    className={`px-2 py-0.5 rounded text-[10px] font-bold border ${manualForm.verification.assignees.includes(member.name) ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-slate-500 border-slate-200'}`}
+                                                >
+                                                    {member.name}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
                     <div className="mt-6 flex justify-end gap-2 border-t pt-4">
@@ -644,7 +744,35 @@ export const ObjectivesKPI: React.FC = () => {
                                             </div>
                                         )}
                                     </div>
+                                    {/* Extended Traceability Info in Tree View */}
+                                    {(story.solution?.description || story.verification?.description) && (
+                                        <div className="ml-4 mt-2 grid grid-cols-1 md:grid-cols-2 gap-2 max-w-4xl">
+                                            {story.solution?.description && (
+                                                <div className="text-xs bg-blue-50 p-2 rounded border border-blue-100">
+                                                    <div className="font-bold text-blue-800 mb-1 flex items-center gap-2"><Wand2 size={10} /> Soluzione:</div>
+                                                    <div className="text-slate-700">{story.solution.description}</div>
+                                                    <div className="mt-1 text-[10px] text-slate-400 flex items-center gap-2">
+                                                        <span>{story.solution.date}</span>
+                                                        <span>•</span>
+                                                        <span>{story.solution.assignees.join(', ')}</span>
+                                                    </div>
+                                                </div>
+                                            )}
+                                            {story.verification?.description && (
+                                                <div className="text-xs bg-emerald-50 p-2 rounded border border-emerald-100">
+                                                    <div className="font-bold text-emerald-800 mb-1 flex items-center gap-2"><CheckCircle2 size={10} /> Verifica:</div>
+                                                    <div className="text-slate-700">{story.verification.description}</div>
+                                                    <div className="mt-1 text-[10px] text-slate-400 flex items-center gap-2">
+                                                        <span>{story.verification.date}</span>
+                                                        <span>•</span>
+                                                        <span>{story.verification.assignees.join(', ')}</span>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
                                 </div>
+
                             ))}
 
                             {(!grouped[need.id] || grouped[need.id].length === 0) && (
@@ -653,20 +781,24 @@ export const ObjectivesKPI: React.FC = () => {
                                 </div>
                             )}
                         </div>
-                    ))}
+                    ))
+                    }
 
-                    {orphans.length > 0 && (
-                        <div className="pt-8 border-t border-slate-200 mt-8">
-                            <h3 className="text-amber-600 font-bold mb-4 flex items-center gap-2"><AlertTriangle size={16} /> Orfane (Non Catalogate)</h3>
-                            {orphans.map(story => (
-                                <div key={story.id} className="ml-4 mb-2 bg-amber-50 border border-amber-200 p-2 rounded inline-block text-xs text-amber-800">
-                                    {story.action}
-                                </div>
-                            ))}
-                        </div>
-                    )}
+                    {
+                        orphans.length > 0 && (
+                            <div className="pt-8 border-t border-slate-200 mt-8">
+                                <h3 className="text-amber-600 font-bold mb-4 flex items-center gap-2"><AlertTriangle size={16} /> Orfane (Non Catalogate)</h3>
+                                {orphans.map(story => (
+                                    <div key={story.id} className="ml-4 mb-2 bg-amber-50 border border-amber-200 p-2 rounded inline-block text-xs text-amber-800">
+                                        {story.action}
+                                    </div>
+                                ))}
+                            </div>
+                        )
+                    }
                 </div>
             )}
         </div>
     );
 };
+
