@@ -3,12 +3,13 @@ import React, { useState, useEffect } from 'react';
 import { Target, ArrowRight, Save, Plus, Trash2, CheckCircle2, XCircle, LayoutList, Loader2, Link as LinkIcon, AlertTriangle, Clock, Edit2, Sparkles, Bot, RefreshCw, Users, Wand2, Calculator, ChevronDown, ChevronUp, Pencil, BookOpen, Layers, CheckSquare } from 'lucide-react';
 import { db, NEEDS_COLLECTION, USER_STORIES_COLLECTION, TASKS_COLLECTION, ensureAuth, getProjectSettings, updateLastSaved, formatDateTime } from '../services/firebase';
 import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, where, writeBatch } from 'firebase/firestore';
-import { EmergingNeed, UserStory, StoryStatus, TeamMember, Complexity } from '../types';
+import { EmergingNeed, UserStory, StoryStatus, TeamMember, Complexity, Task } from '../types';
 import { INITIAL_PLAN } from '../constants';
 
 export const ObjectivesKPI: React.FC = () => {
     const [needs, setNeeds] = useState<EmergingNeed[]>([]);
     const [stories, setStories] = useState<UserStory[]>([]);
+    const [tasks, setTasks] = useState<Task[]>([]);
     const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
     const [loading, setLoading] = useState(false);
     const [integrating, setIntegrating] = useState(false);
@@ -18,6 +19,9 @@ export const ObjectivesKPI: React.FC = () => {
     // AI / Copilot States
     const [isGenerating, setIsGenerating] = useState(false);
     const [draftStories, setDraftStories] = useState<any[]>([]);
+
+    // View Mode
+    const [viewMode, setViewMode] = useState<'cards' | 'tree'>('cards');
 
     // Manual Entry / Edit State
     const [isManualAdding, setIsManualAdding] = useState(false);
@@ -70,6 +74,10 @@ export const ObjectivesKPI: React.FC = () => {
             // Load Existing Stories
             const storySnap = await getDocs(collection(db, USER_STORIES_COLLECTION));
             setStories(storySnap.docs.map(d => ({ id: d.id, ...d.data() } as UserStory)));
+
+            // Load Tasks for Traceability
+            const taskSnap = await getDocs(collection(db, TASKS_COLLECTION));
+            setTasks(taskSnap.docs.map(d => ({ id: d.id, ...d.data() } as Task)));
         } catch (e) {
             console.error("Error refreshing data", e);
         }
@@ -159,6 +167,114 @@ export const ObjectivesKPI: React.FC = () => {
     };
 
 
+    // --- MISSING FUNCTIONS RESTORED ---
+    const handleDelete = async (id: string) => {
+        if (!window.confirm("Sei sicuro di voler eliminare questa User Story?")) return;
+        setLoading(true);
+        try {
+            await deleteDoc(doc(db, USER_STORIES_COLLECTION, id));
+            setStories(stories.filter(s => s.id !== id));
+            await updateLastSaved();
+        } catch (e) {
+            console.error("Error deleting", e);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const confirmedCount = stories.filter(s => s.status === 'CONFIRMED').length;
+
+    const integrateStoriesToPlan = async () => {
+        if (!window.confirm(`Vuoi pianificare ${confirmedCount} storie confermate nello Sprint?`)) return;
+        setIntegrating(true);
+        // This is mostly a visual feedback in this view, the actual planning happens in ExecutionPlan
+        // But we can mark them as "Ready to Plan" or similar if we wanted.
+        // For now we just wait a bit to simulate the hand-off
+        setTimeout(() => {
+            setIntegrating(false);
+            alert("Le storie sono pronte per essere importate nel Piano Esecutivo.");
+        }, 1000);
+    };
+
+    // --- COPILOT MOCK LOGIC ---
+    const runCopilotGenerator = async () => {
+        setIsGenerating(true);
+        // Simulate AI generation based on empty needs
+        const emptyNeeds = needs;
+
+        setTimeout(() => {
+            const newDrafts: any[] = [];
+            emptyNeeds.forEach(need => {
+                if (!stories.some(s => s.needId === need.id)) {
+                    // Generate a draft for this need
+                    newDrafts.push({
+                        tempId: Math.random().toString(),
+                        needId: need.id,
+                        needDescription: need.description,
+                        role: "Utente",
+                        action: `soddisfare l'esigenza: ${need.description}`,
+                        benefit: `migliorare il processo di ${need.originator}`,
+                        complexity: 'M',
+                        duration: 4
+                    });
+                }
+            });
+
+            if (newDrafts.length === 0) {
+                alert("Tutte le esigenze hanno già delle storie!");
+            } else {
+                setDraftStories(newDrafts);
+            }
+            setIsGenerating(false);
+        }, 1500);
+    };
+
+    const saveAllDrafts = async () => {
+        setLoading(true);
+        const batch = writeBatch(db);
+        const newLocalStories: UserStory[] = [];
+
+        draftStories.forEach(draft => {
+            const ref = doc(collection(db, USER_STORIES_COLLECTION));
+            const storyData = {
+                needId: draft.needId,
+                needDescription: draft.needDescription,
+                role: draft.role,
+                action: draft.action,
+                benefit: draft.benefit,
+                complexity: draft.complexity || 'M',
+                definitionOfReady: '',
+                definitionOfDone: '',
+                duration: draft.duration || 2,
+                assignedTo: [],
+                status: 'CONFIRMED'
+            };
+            batch.set(ref, storyData);
+            newLocalStories.push({ ...storyData, id: ref.id } as UserStory);
+        });
+
+        await batch.commit();
+        setStories([...stories, ...newLocalStories]);
+        setDraftStories([]);
+        setLoading(false);
+    };
+
+    const removeDraft = (tempId: string) => {
+        setDraftStories(draftStories.filter(d => d.tempId !== tempId));
+    };
+
+    const updateDraft = (tempId: string, field: string, value: string) => {
+        setDraftStories(draftStories.map(d => d.tempId === tempId ? { ...d, [field]: value } : d));
+    };
+
+    const saveDraftToDB = async (draft: any) => {
+        const { tempId, ...data } = draft;
+        const newStory = { ...data, status: 'CONFIRMED', assignedTo: [], definitionOfReady: '', definitionOfDone: '' };
+        await addDoc(collection(db, USER_STORIES_COLLECTION), newStory);
+        await refreshData();
+        removeDraft(tempId);
+    };
+
     // --- UI HELPERS ---
     const getGroupedStories = () => {
         const grouped: Record<string, UserStory[]> = {};
@@ -224,6 +340,20 @@ export const ObjectivesKPI: React.FC = () => {
                     </div>
 
                     <div className="flex flex-col items-end gap-2 shrink-0">
+                        <div className="flex bg-slate-100 p-1 rounded-lg border border-slate-200">
+                            <button
+                                onClick={() => setViewMode('cards')}
+                                className={`px-3 py-1.5 rounded text-xs font-bold flex items-center gap-2 transition-all ${viewMode === 'cards' ? 'bg-white text-indigo-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                            >
+                                <LayoutList size={14} /> Schede
+                            </button>
+                            <button
+                                onClick={() => setViewMode('tree')}
+                                className={`px-3 py-1.5 rounded text-xs font-bold flex items-center gap-2 transition-all ${viewMode === 'tree' ? 'bg-white text-indigo-700 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                            >
+                                <Layers size={14} /> Distinta Base
+                            </button>
+                        </div>
                         <span className="text-xs text-slate-400 font-medium flex items-center gap-1">
                             <Clock size={12} /> Ultimo agg: {formatDateTime(lastUpdated)}
                         </span>
@@ -363,116 +493,180 @@ export const ObjectivesKPI: React.FC = () => {
             )}
 
             {/* PARENT-CHILD VIEW: NEEDS -> USER STORIES */}
-            <div className="space-y-6">
+            {viewMode === 'cards' ? (
+                <div className="space-y-6">
 
-                {/* SECTION 1: NEEDS WITH STORIES */}
-                {needs.map(need => (
-                    <div key={need.id} className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
-                        {/* Need Header */}
-                        <div className="bg-slate-50 px-6 py-4 border-b border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-4">
-                            <div className="flex gap-4 items-start">
-                                <div className={`mt-1 flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs border ${need.priority === 'URGENT' ? 'bg-red-100 text-red-700 border-red-200' :
+                    {/* SECTION 1: NEEDS WITH STORIES */}
+                    {needs.map(need => (
+                        <div key={need.id} className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                            {/* Need Header */}
+                            <div className="bg-slate-50 px-6 py-4 border-b border-slate-200 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                                <div className="flex gap-4 items-start">
+                                    <div className={`mt-1 flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs border ${need.priority === 'URGENT' ? 'bg-red-100 text-red-700 border-red-200' :
                                         need.priority === 'HIGH' ? 'bg-orange-100 text-orange-700 border-orange-200' :
                                             'bg-blue-100 text-blue-700 border-blue-200'
-                                    }`}>
-                                    {Array.isArray(grouped[need.id]) ? grouped[need.id].length : 0}
-                                </div>
-                                <div>
-                                    <div className="flex items-center gap-2 mb-1">
-                                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Esigenza {need.priority}</span>
-                                        <span className="text-slate-300">•</span>
-                                        <span className="text-[10px] font-bold text-slate-500">{need.originator}</span>
+                                        }`}>
+                                        {Array.isArray(grouped[need.id]) ? grouped[need.id].length : 0}
                                     </div>
-                                    <h3 className="font-bold text-slate-800 text-lg">{need.description}</h3>
+                                    <div>
+                                        <div className="flex items-center gap-2 mb-1">
+                                            <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Esigenza {need.priority}</span>
+                                            <span className="text-slate-300">•</span>
+                                            <span className="text-[10px] font-bold text-slate-500">{need.originator}</span>
+                                        </div>
+                                        <h3 className="font-bold text-slate-800 text-lg">{need.description}</h3>
+                                    </div>
                                 </div>
+
+                                <button
+                                    onClick={() => handleAddStoryToNeed(need.id)}
+                                    className="text-xs bg-white border border-slate-200 hover:border-indigo-300 hover:text-indigo-600 text-slate-600 px-3 py-1.5 rounded-lg font-bold flex items-center gap-2 transition-all shadow-sm"
+                                >
+                                    <Plus size={14} /> Aggiungi Story
+                                </button>
                             </div>
 
-                            <button
-                                onClick={() => handleAddStoryToNeed(need.id)}
-                                className="text-xs bg-white border border-slate-200 hover:border-indigo-300 hover:text-indigo-600 text-slate-600 px-3 py-1.5 rounded-lg font-bold flex items-center gap-2 transition-all shadow-sm"
-                            >
-                                <Plus size={14} /> Aggiungi Story
-                            </button>
-                        </div>
+                            {/* Stories Grid for this Need */}
+                            <div className="p-6 bg-white min-h-[100px]">
+                                {(!grouped[need.id] || grouped[need.id].length === 0) ? (
+                                    <div className="text-center py-4 border-2 border-dashed border-slate-100 rounded-xl bg-slate-50/50">
+                                        <p className="text-slate-400 text-sm mb-2">Nessuna User Story collegata a questa esigenza.</p>
+                                    </div>
+                                ) : (
+                                    <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+                                        {grouped[need.id].map(story => (
+                                            <div key={story.id} className={`p-4 rounded-xl border relative group transition-all ${story.status === 'INTEGRATED' ? 'bg-emerald-50/50 border-emerald-100 opacity-80' : 'bg-white border-slate-100 hover:border-indigo-200 hover:shadow-md'}`}>
+                                                {/* Action Buttons */}
+                                                <div className="absolute top-3 right-3 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-10">
+                                                    <button onClick={() => handleEditClick(story)} className="p-1.5 text-slate-400 hover:text-blue-600 rounded bg-white border border-slate-200 shadow-sm"><Pencil size={12} /></button>
+                                                    <button onClick={() => handleDelete(story.id)} className="p-1.5 text-slate-400 hover:text-red-600 rounded bg-white border border-slate-200 shadow-sm"><Trash2 size={12} /></button>
+                                                </div>
 
-                        {/* Stories Grid for this Need */}
-                        <div className="p-6 bg-white min-h-[100px]">
-                            {(!grouped[need.id] || grouped[need.id].length === 0) ? (
-                                <div className="text-center py-4 border-2 border-dashed border-slate-100 rounded-xl bg-slate-50/50">
-                                    <p className="text-slate-400 text-sm mb-2">Nessuna User Story collegata a questa esigenza.</p>
-                                </div>
-                            ) : (
-                                <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-                                    {grouped[need.id].map(story => (
-                                        <div key={story.id} className={`p-4 rounded-xl border relative group transition-all ${story.status === 'INTEGRATED' ? 'bg-emerald-50/50 border-emerald-100 opacity-80' : 'bg-white border-slate-100 hover:border-indigo-200 hover:shadow-md'}`}>
-                                            {/* Action Buttons */}
-                                            <div className="absolute top-3 right-3 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-10">
-                                                <button onClick={() => handleEditClick(story)} className="p-1.5 text-slate-400 hover:text-blue-600 rounded bg-white border border-slate-200 shadow-sm"><Pencil size={12} /></button>
-                                                <button onClick={() => handleDelete(story.id)} className="p-1.5 text-slate-400 hover:text-red-600 rounded bg-white border border-slate-200 shadow-sm"><Trash2 size={12} /></button>
-                                            </div>
-
-                                            <div className="flex items-center gap-2 mb-2">
-                                                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded border ${story.complexity === 'XL' ? 'bg-purple-100 text-purple-700 border-purple-200' : 'bg-slate-100 text-slate-500 border-slate-200'}`}>
-                                                    {story.complexity}
-                                                </span>
-                                                <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded uppercase ${story.status === 'CONFIRMED' ? 'bg-indigo-50 text-indigo-600' :
+                                                <div className="flex items-center gap-2 mb-2">
+                                                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded border ${story.complexity === 'XL' ? 'bg-purple-100 text-purple-700 border-purple-200' : 'bg-slate-100 text-slate-500 border-slate-200'}`}>
+                                                        {story.complexity}
+                                                    </span>
+                                                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded uppercase ${story.status === 'CONFIRMED' ? 'bg-indigo-50 text-indigo-600' :
                                                         story.status === 'INTEGRATED' ? 'bg-emerald-50 text-emerald-600' : 'bg-slate-50 text-slate-400'
-                                                    }`}>
-                                                    {story.status}
-                                                </span>
-                                            </div>
+                                                        }`}>
+                                                        {story.status}
+                                                    </span>
+                                                </div>
 
-                                            <div className="pr-8">
-                                                <p className="text-sm text-slate-800"><span className="font-bold text-slate-400 text-xs uppercase mr-2">Come</span> {story.role}</p>
-                                                <p className="text-base font-bold text-indigo-900 leading-snug my-1"><span className="font-normal text-slate-400 text-xs uppercase mr-2">Voglio</span> {story.action}</p>
-                                                <p className="text-sm text-slate-600 italic"><span className="font-bold text-slate-400 not-italic text-xs uppercase mr-2">Per</span> {story.benefit}</p>
-                                            </div>
+                                                <div className="pr-8">
+                                                    <p className="text-sm text-slate-800"><span className="font-bold text-slate-400 text-xs uppercase mr-2">Come</span> {story.role}</p>
+                                                    <p className="text-base font-bold text-indigo-900 leading-snug my-1"><span className="font-normal text-slate-400 text-xs uppercase mr-2">Voglio</span> {story.action}</p>
+                                                    <p className="text-sm text-slate-600 italic"><span className="font-bold text-slate-400 not-italic text-xs uppercase mr-2">Per</span> {story.benefit}</p>
+                                                </div>
 
-                                            <div className="mt-3 flex items-center justify-between border-t border-slate-50 pt-2">
-                                                {story.definitionOfDone && (
-                                                    <div className="flex items-center gap-1 text-[10px] text-emerald-600 font-medium" title={story.definitionOfDone}>
-                                                        <CheckSquare size={12} /> DoD definita
+                                                <div className="mt-3 flex items-center justify-between border-t border-slate-50 pt-2">
+                                                    {story.definitionOfDone && (
+                                                        <div className="flex items-center gap-1 text-[10px] text-emerald-600 font-medium" title={story.definitionOfDone}>
+                                                            <CheckSquare size={12} /> DoD definita
+                                                        </div>
+                                                    )}
+                                                    <div className="flex items-center gap-1 text-[10px] text-slate-400 ml-auto">
+                                                        <Clock size={12} /> {story.duration}h
                                                     </div>
-                                                )}
-                                                <div className="flex items-center gap-1 text-[10px] text-slate-400 ml-auto">
-                                                    <Clock size={12} /> {story.duration}h
                                                 </div>
                                             </div>
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                ))}
-
-                {/* SECTION 2: ORPHANS */}
-                {orphans.length > 0 && (
-                    <div className="bg-slate-50 rounded-xl border border-slate-200 p-6 opacity-80 hover:opacity-100 transition-opacity">
-                        <div className="flex items-center gap-3 mb-4">
-                            <AlertTriangle className="text-amber-500" />
-                            <h3 className="font-bold text-slate-700">User Stories Non Collegate (Orfane)</h3>
-                            <span className="bg-slate-200 text-slate-600 px-2 py-0.5 rounded-full text-xs font-bold">{orphans.length}</span>
-                        </div>
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                            {orphans.map(story => (
-                                <div key={story.id} className="bg-white p-4 rounded-lg border border-slate-200 shadow-sm relative group">
-                                    <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                        <button onClick={() => handleEditClick(story)} className="p-1 hover:bg-slate-100 rounded"><Pencil size={14} /></button>
-                                        <button onClick={() => handleDelete(story.id)} className="p-1 hover:bg-slate-100 rounded text-red-500"><Trash2 size={14} /></button>
+                                        ))}
                                     </div>
-                                    <div className="text-xs font-bold text-slate-400 mb-1">Come {story.role}</div>
-                                    <div className="font-bold text-slate-800 text-sm mb-1">{story.action}</div>
-                                    <div className="text-xs text-amber-600 flex items-center gap-1 mt-2">
-                                        <AlertTriangle size={12} /> Manca Link Esigenza
+                                )}
+                            </div>
+                        </div>
+                    ))}
+
+                    {/* SECTION 2: ORPHANS */}
+                    {orphans.length > 0 && (
+                        <div className="bg-slate-50 rounded-xl border border-slate-200 p-6 opacity-80 hover:opacity-100 transition-opacity">
+                            <div className="flex items-center gap-3 mb-4">
+                                <AlertTriangle className="text-amber-500" />
+                                <h3 className="font-bold text-slate-700">User Stories Non Collegate (Orfane)</h3>
+                                <span className="bg-slate-200 text-slate-600 px-2 py-0.5 rounded-full text-xs font-bold">{orphans.length}</span>
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                {orphans.map(story => (
+                                    <div key={story.id} className="bg-white p-4 rounded-lg border border-slate-200 shadow-sm relative group">
+                                        <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                            <button onClick={() => handleEditClick(story)} className="p-1 hover:bg-slate-100 rounded"><Pencil size={14} /></button>
+                                            <button onClick={() => handleDelete(story.id)} className="p-1 hover:bg-slate-100 rounded text-red-500"><Trash2 size={14} /></button>
+                                        </div>
+                                        <div className="text-xs font-bold text-slate-400 mb-1">Come {story.role}</div>
+                                        <div className="font-bold text-slate-800 text-sm mb-1">{story.action}</div>
+                                        <div className="text-xs text-amber-600 flex items-center gap-1 mt-2">
+                                            <AlertTriangle size={12} /> Manca Link Esigenza
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+                </div>
+            ) : (
+                <div className="space-y-4 font-mono text-sm">
+                    {needs.map(need => (
+                        <div key={need.id} className="relative pl-6 pb-4 border-l-2 border-indigo-200 last:border-0">
+                            {/* Node Connector */}
+                            <div className="absolute -left-[9px] top-0 w-4 h-4 rounded-full bg-indigo-500 border-2 border-white shadow-sm z-10"></div>
+
+                            {/* NEED CARD */}
+                            <div className="ml-4 bg-white border border-indigo-200 rounded-lg p-3 shadow-sm inline-block min-w-[300px] mb-2">
+                                <div className="flex items-center gap-2 mb-1">
+                                    <span className="bg-indigo-100 text-indigo-700 text-[10px] font-bold px-1.5 rounded">ESIGENZA</span>
+                                    <span className="text-xs text-slate-500">{need.originator}</span>
+                                </div>
+                                <div className="font-bold text-slate-800">{need.description}</div>
+                            </div>
+
+                            {/* USER STORIES */}
+                            {grouped[need.id]?.map(story => (
+                                <div key={story.id} className="relative ml-12 mt-4 pl-6 pb-2 border-l-2 border-slate-200 last:border-0">
+                                    <div className="absolute -left-[9px] top-4 w-4 h-0.5 bg-slate-200"></div>
+
+                                    <div className="bg-slate-50 border border-slate-200 rounded-lg p-3 inline-block min-w-[300px] hover:border-indigo-300 transition-colors">
+                                        <div className="flex items-center gap-2 mb-1">
+                                            <span className="bg-slate-200 text-slate-600 text-[10px] font-bold px-1.5 rounded">USER STORY</span>
+                                            <span className="text-[10px] text-slate-400">{story.complexity}</span>
+                                        </div>
+                                        <div className="font-medium text-slate-700 text-sm">{story.action}</div>
+
+                                        {/* TASKS */}
+                                        {tasks.filter(t => t.generatedFromStoryId === story.id).length > 0 && (
+                                            <div className="mt-3 pl-4 border-l-2 border-emerald-100 space-y-2">
+                                                {tasks.filter(t => t.generatedFromStoryId === story.id).map(task => (
+                                                    <div key={task.id} className="text-xs flex items-center gap-2 text-slate-600">
+                                                        <div className="w-1.5 h-1.5 rounded-full bg-emerald-400"></div>
+                                                        <span className="truncate max-w-[250px]">{task.description}</span>
+                                                        <span className="text-[10px] bg-emerald-50 text-emerald-600 px-1 rounded">{task.duration}h</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
                                     </div>
                                 </div>
                             ))}
-                        </div>
-                    </div>
-                )}
 
-            </div>
+                            {(!grouped[need.id] || grouped[need.id].length === 0) && (
+                                <div className="ml-16 mt-2 text-xs text-slate-400 italic">
+                                    └── Nessuna User Story collegata
+                                </div>
+                            )}
+                        </div>
+                    ))}
+
+                    {orphans.length > 0 && (
+                        <div className="pt-8 border-t border-slate-200 mt-8">
+                            <h3 className="text-amber-600 font-bold mb-4 flex items-center gap-2"><AlertTriangle size={16} /> Orfane (Non Catalogate)</h3>
+                            {orphans.map(story => (
+                                <div key={story.id} className="ml-4 mb-2 bg-amber-50 border border-amber-200 p-2 rounded inline-block text-xs text-amber-800">
+                                    {story.action}
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            )}
         </div>
     );
 };
